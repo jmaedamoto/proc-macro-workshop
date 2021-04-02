@@ -24,6 +24,9 @@ fn extract_generic_types(ty: &syn::Type, generic_types: &Vec::<syn::Ident>) -> O
         if path.get_ident().is_some() && generic_types.contains(path.get_ident().unwrap()){
             return Some((*path).clone());
         }else{
+            if path.segments.len() > 1 && generic_types.contains(&path.segments[0].ident){
+                return Some((*path).clone());
+            }
             for segment in path.segments.iter(){
                 if &segment.ident.to_string() == "PhantomData"{
                     continue;
