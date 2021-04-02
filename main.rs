@@ -6,27 +6,23 @@
 // To run the code:
 //     $ cargo run
 
-
 use derive_debug::CustomDebug;
 use std::fmt::Debug;
-use std::marker::PhantomData;
-
-type S = String;
 
 #[derive(CustomDebug)]
-pub struct Field<T> {
-    marker: PhantomData<T>,
-    string: S,
-    #[debug = "0b{:08b}"]
-    bitmask: u8,
+pub struct One<T> {
+    value: T,
+    two: Option<Box<Two<T>>>,
+}
+
+#[derive(CustomDebug)]
+struct Two<T> {
+    one: Box<One<T>>,
 }
 
 fn assert_debug<F: Debug>() {}
 
 fn main() {
-    // Does not implement Debug.
-    struct NotDebug;
-
-    assert_debug::<PhantomData<NotDebug>>();
-    assert_debug::<Field<NotDebug>>();
+    assert_debug::<One<u8>>();
+    assert_debug::<Two<u8>>();
 }

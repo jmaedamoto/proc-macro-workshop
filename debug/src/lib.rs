@@ -19,6 +19,29 @@ fn extract_debug_pattern(field: &syn::Field) -> Option<String>{
     })
 }
 
+fn extract_generic_types(ty: &syn::Type, generic_types: &Vec::<syn::Ident>) -> Option<syn::Path>{
+    if let syn::Type::Path(syn::TypePath{ref path,..}) = ty{
+        if path.get_ident().is_some() && generic_types.contains(path.get_ident().unwrap()){
+            return Some((*path).clone());
+        }else{
+            for segment in path.segments.iter(){
+                if &segment.ident.to_string() == "PhantomData"{
+                    continue;
+                }
+                if let syn::PathArguments::AngleBracketed(syn::AngleBracketedGenericArguments{ref args,..}) = &segment.arguments{
+                    for arg in args.iter(){
+                        if let syn::GenericArgument::Type(ref ty) = arg{
+                            return  extract_generic_types(ty, generic_types);
+                        }
+                    }
+                }
+            }
+            return None;
+        }
+    }
+    None
+}
+
 #[proc_macro_derive(CustomDebug, attributes(debug))]
 pub fn derive(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
@@ -49,26 +72,12 @@ pub fn derive(input: TokenStream) -> TokenStream {
 
     for field in fields.iter(){
         let pattern = extract_debug_pattern(field);
-        if let syn::Type::Path(syn::TypePath{ref path,..}) = &field.ty{
-            if path.get_ident().is_some() && generic_types.contains(path.get_ident().unwrap()){
-                generic_bound_types.push((*path).clone());
-            }else{
-                let outer_path = path.clone();
-                for segment in path.segments.iter(){
-                    if let syn::PathArguments::AngleBracketed(syn::AngleBracketedGenericArguments{ref args,..}) = &segment.arguments{
-                        for arg in args.iter(){
-                            if let syn::GenericArgument::Type(ref ty) = arg{
-                                if let syn::Type::Path(syn::TypePath{ref path,..}) = &ty{
-                                    if path.get_ident().is_some() && generic_types.contains(path.get_ident().unwrap()){
-                                        generic_bound_types.push(outer_path.clone());
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+        let generic_type = extract_generic_types(&field.ty, &generic_types);
+        if let Some(ref ty) = generic_type{
+            if !generic_bound_types.contains(ty){
+                generic_bound_types.push((*ty).clone());
             }
-        }
+        } 
         
         match &field.ident{
             Some(name) => {
