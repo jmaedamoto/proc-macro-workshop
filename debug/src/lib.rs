@@ -36,17 +36,7 @@ pub fn derive(input: TokenStream) -> TokenStream {
         if let syn::GenericParam::Type(ref type_param) = param{
             generic_types.push(type_param.ident.clone())
         }
-    }
-
-    let generic_bounds = generic_types.iter().map(|name| {
-        quote!{ #name: ::std::fmt::Debug, }
-    });
-
-    let impl_token = if generic_bounds.len() > 0 {
-        quote!{impl #impl_generics ::std::fmt::Debug for #ident #ty_generics where #(#generic_bounds)* }
-    }else{
-        quote!{impl #impl_generics ::std::fmt::Debug for #ident #ty_generics}
-    };  
+    } 
 
     let fields  = if let syn::Data::Struct(syn::DataStruct{ref fields,..}) = input.data {
         fields
@@ -55,9 +45,31 @@ pub fn derive(input: TokenStream) -> TokenStream {
     };
 
     let mut fields_token = Vec::new();
+    let mut generic_bound_types: Vec<syn::Path> = Vec::new();
 
     for field in fields.iter(){
         let pattern = extract_debug_pattern(field);
+        if let syn::Type::Path(syn::TypePath{ref path,..}) = &field.ty{
+            if path.get_ident().is_some() && generic_types.contains(path.get_ident().unwrap()){
+                generic_bound_types.push((*path).clone());
+            }else{
+                let outer_path = path.clone();
+                for segment in path.segments.iter(){
+                    if let syn::PathArguments::AngleBracketed(syn::AngleBracketedGenericArguments{ref args,..}) = &segment.arguments{
+                        for arg in args.iter(){
+                            if let syn::GenericArgument::Type(ref ty) = arg{
+                                if let syn::Type::Path(syn::TypePath{ref path,..}) = &ty{
+                                    if path.get_ident().is_some() && generic_types.contains(path.get_ident().unwrap()){
+                                        generic_bound_types.push(outer_path.clone());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
         match &field.ident{
             Some(name) => {
                 let name_str = name.to_string();
@@ -69,6 +81,16 @@ pub fn derive(input: TokenStream) -> TokenStream {
             }
             None => {}
         }
+    };
+
+    let generic_bound_tokens = generic_bound_types.iter().map(|bound_type|{
+        quote!{#bound_type: ::std::fmt::Debug,}
+    });
+
+    let impl_token = if generic_bound_tokens.len() > 0 {
+        quote!{impl #impl_generics ::std::fmt::Debug for #ident #ty_generics where #(#generic_bound_tokens)* }
+    }else{
+        quote!{impl #impl_generics ::std::fmt::Debug for #ident #ty_generics}
     }; 
 
     let expanded = quote!{
