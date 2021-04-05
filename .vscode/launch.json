@@ -1,0 +1,159 @@
+{
+  // IntelliSense を使用して利用可能な属性を学べます。
+  // 既存の属性の説明をホバーして表示します。
+  // 詳細情報は次を確認してください: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug executable 'workshop'",
+      "cargo": {
+        "args": [
+          "build",
+          "--bin=workshop",
+          "--package=proc-macro-workshop"
+        ],
+        "filter": {
+          "name": "workshop",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in executable 'workshop'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--bin=workshop",
+          "--package=proc-macro-workshop"
+        ],
+        "filter": {
+          "name": "workshop",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in library 'bitfield'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--lib",
+          "--package=bitfield"
+        ],
+        "filter": {
+          "name": "bitfield",
+          "kind": "lib"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug integration test 'tests'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--test=tests",
+          "--package=bitfield"
+        ],
+        "filter": {
+          "name": "tests",
+          "kind": "test"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug integration test 'tests'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--test=tests",
+          "--package=derive_builder"
+        ],
+        "filter": {
+          "name": "tests",
+          "kind": "test"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug integration test 'tests'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--test=tests",
+          "--package=derive_debug"
+        ],
+        "filter": {
+          "name": "tests",
+          "kind": "test"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug integration test 'tests'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--test=tests",
+          "--package=seq"
+        ],
+        "filter": {
+          "name": "tests",
+          "kind": "test"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug integration test 'tests'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--test=tests",
+          "--package=sorted"
+        ],
+        "filter": {
+          "name": "tests",
+          "kind": "test"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}
