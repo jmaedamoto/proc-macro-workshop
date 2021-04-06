@@ -68,6 +68,7 @@ pub fn derive(input: TokenStream) -> TokenStream {
     let mut fields_token = Vec::new();
     let mut generic_bound_types: Vec<syn::Path> = Vec::new();
     let mut attribute_bound_tokens: Vec<TokenStream2> = Vec::new();
+    let mut field_attribute_bound_tokens: Vec<TokenStream2> = Vec::new();
     let mut generic_types = Vec::new();
 
     let input = parse_macro_input!(input as DeriveInput);
@@ -94,23 +95,19 @@ pub fn derive(input: TokenStream) -> TokenStream {
         return TokenStream::from(syn::Error::new(ident.span(),"Custom Debug corresponds to Struct only").to_compile_error());
     };
 
-
-
     for field in fields.iter(){
         let pattern = extract_debug_pattern(&field.attrs);
-        let generic_type = extract_generic_types(&field.ty, &generic_types);
-        if let Some(ref ty) = generic_type{
-            if !generic_bound_types.contains(ty){
-                generic_bound_types.push((*ty).clone());
+        if let Some(AttributeType::Bound(ref bound)) = pattern{
+            let bound: TokenStream2 = bound.parse().unwrap();
+            field_attribute_bound_tokens.push(quote!{ #bound,});
+        }else{
+            let generic_type = extract_generic_types(&field.ty, &generic_types);
+            if let Some(ref ty) = generic_type{
+                if !generic_bound_types.contains(ty){
+                    generic_bound_types.push((*ty).clone());
+                }
             }
         }
-
-        match pattern {
-            Some(AttributeType::Bound(ref bound)) => {
-                attribute_bound_tokens.push(bound.parse().unwrap());
-            },
-            _ => {}
-        };
 
         match &field.ident{
             Some(name) => {
@@ -134,9 +131,9 @@ pub fn derive(input: TokenStream) -> TokenStream {
     });
 
     let impl_token = if attribute_bound_tokens.len() > 0 {
-        quote!{impl #impl_generics ::std::fmt::Debug for #ident #ty_generics where #(#attribute_bound_tokens)* }
-    }else if generic_bound_tokens.len() > 0 {
-        quote!{impl #impl_generics ::std::fmt::Debug for #ident #ty_generics where #(#generic_bound_tokens)* }
+        quote!{impl #impl_generics ::std::fmt::Debug for #ident #ty_generics where #(#attribute_bound_tokens)*}
+    }else if field_attribute_bound_tokens.len() > 0 || generic_bound_tokens.len() > 0{
+        quote!{impl #impl_generics ::std::fmt::Debug for #ident #ty_generics where #(#field_attribute_bound_tokens)* #(#generic_bound_tokens)*}
     }else{
         quote!{impl #impl_generics ::std::fmt::Debug for #ident #ty_generics}
     }; 
