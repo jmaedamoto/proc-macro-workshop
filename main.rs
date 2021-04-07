@@ -6,33 +6,16 @@
 // To run the code:
 //     $ cargo run
 
-use derive_debug::CustomDebug;
-use std::fmt::Debug;
+use seq::seq;
 
-pub trait Trait {
-    type Value;
+macro_rules! expand_to_nothing {
+    ($arg:literal) => {
+        // nothing
+    };
 }
 
-#[derive(CustomDebug)]
-pub struct Wrapper<T: Trait, U> {
-    #[debug(bound = "T::Value: Debug")]
-    field: Field<T>,
-    normal: U,
-}
+seq!(N in 0..4 {
+    expand_to_nothing!(N);
+});
 
-#[derive(CustomDebug)]
-struct Field<T: Trait> {
-    values: Vec<T::Value>,
-}
-
-fn assert_debug<F: Debug>() {}
-
-fn main() {
-    struct Id;
-
-    impl Trait for Id {
-        type Value = u8;
-    }
-
-    assert_debug::<Wrapper<Id, String>>();
-}
+fn main() {}
