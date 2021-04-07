@@ -16,4 +16,4 @@ path = "tests/progress.rs"
 trybuild = { version = "1.0", features = ["diff"] }
 
 [dependencies]
-# TODO
+syn = { version = "1.0", features = ["full"] }

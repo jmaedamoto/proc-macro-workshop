@@ -6,11 +6,15 @@
 // To run the code:
 //     $ cargo run
 
+use sorted::sorted;
 
-use seq::seq;
+#[sorted]
+pub enum Conference {
+    RustBeltRust,
+    RustConf,
+    RustFest,
+    RustLatam,
+    RustRush,
+}
 
-seq!(N in 0..1 {
-    fn main() {
-        let _ = Missing#N;
-    }
-});
+fn main() {}
