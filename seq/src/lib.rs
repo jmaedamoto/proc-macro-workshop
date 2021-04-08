@@ -5,7 +5,6 @@ use syn::parse::Parse;
 use std::ops::Range;
 use quote::{quote, format_ident};
 
-#[derive(Debug)]
 struct Item {
     ident: Ident,
     range: Range<i128>,
