@@ -57,6 +57,9 @@ impl VisitMut for SortMatchArm{
         if attr.is_some(){
             let arms = node_copy.arms.iter().map(|arm| {
                 match &arm.pat {
+                    syn::Pat::Ident(syn::PatIdent{ident,..}) => {
+                        Some(ident.clone())
+                    }
                     syn::Pat::TupleStruct(syn::PatTupleStruct{path,..}) => {
                         Some(path.segments.last().unwrap().ident.clone())
                     }
@@ -65,6 +68,9 @@ impl VisitMut for SortMatchArm{
                     }
                     syn::Pat::Struct(syn::PatStruct{path,..}) => {
                         Some(path.segments.last().unwrap().ident.clone())
+                    }
+                    syn::Pat::Wild(wild) => {
+                        Some(syn::Ident::new("_", wild.span()))
                     }
                     _ => {
                         self.error_token.push(mk_error(arm.pat.span(),"unsupported by #[sorted]"));

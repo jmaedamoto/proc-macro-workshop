@@ -5,14 +5,29 @@
 //
 // To run the code:
 //     $ cargo run
-#[sorted::check]
-fn f(bytes: &[u8]) -> Option<u8> {
-    #[sorted]
-    match bytes {
-        [] => Some(0),
-        [a] => Some(*a),
-        [a, b] => Some(a + b),
-        _other => None,
+
+use sorted::sorted;
+
+#[sorted]
+pub enum Conference {
+    RustBeltRust,
+    RustConf,
+    RustFest,
+    RustLatam,
+    RustRush,
+}
+
+impl Conference {
+    #[sorted::check]
+    pub fn region(&self) -> &str {
+        use self::Conference::*;
+
+        #[sorted]
+        match self {
+            RustFest => "Europe",
+            RustLatam => "Latin America",
+            _ => "elsewhere",  
+        }
     }
 }
 

@@ -15,9 +15,3 @@ error: unsupported by #[sorted]
    |
 14 |         [a, b] => Some(a + b),
    |         ^^^^^^
-
-error: unsupported by #[sorted]
-  --> $DIR/07-unrecognized-pattern.rs:15:9
-   |
-15 |         _other => None,
-   |         ^^^^^^
