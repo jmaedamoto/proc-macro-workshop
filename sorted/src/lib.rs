@@ -3,6 +3,7 @@ use proc_macro2::{TokenStream as TokenStream2, Span};
 use syn::{Item, ItemEnum, ItemFn, ExprMatch, parse_macro_input};
 use syn::visit_mut::{VisitMut};
 use quote::quote;
+use syn::spanned::Spanned;
 
 fn mk_error(span: Span, message: &str) -> TokenStream2{
     syn::Error::new(span,message).into_compile_error()
@@ -37,7 +38,7 @@ pub fn sorted(args: TokenStream, input: TokenStream) -> TokenStream {
 }
 
 struct SortMatchArm{
-    error_token: Option<TokenStream2>
+    error_token: Vec<TokenStream2>
 }
 
 impl VisitMut for SortMatchArm{
@@ -52,22 +53,37 @@ impl VisitMut for SortMatchArm{
             }
         });
 
+        //06でError::Fmt全体にspanを設定する方法が見つからないため妥協
         if attr.is_some(){
-            let arms = node_copy.arms.iter().filter_map(|arm|{
-                if let syn::Pat::TupleStruct(syn::PatTupleStruct{ref path,..}) = arm.pat{
-                    path.get_ident()
-                }else{
-                    None
+            let arms = node_copy.arms.iter().map(|arm| {
+                match &arm.pat {
+                    syn::Pat::TupleStruct(syn::PatTupleStruct{path,..}) => {
+                        Some(path.segments.last().unwrap().ident.clone())
+                    }
+                    syn::Pat::Path(syn::PatPath{path,..}) => {
+                        Some(path.segments.last().unwrap().ident.clone())
+                    }
+                    syn::Pat::Struct(syn::PatStruct{path,..}) => {
+                        Some(path.segments.last().unwrap().ident.clone())
+                    }
+                    _ => {
+                        self.error_token.push(mk_error(arm.pat.span(),"unsupported by #[sorted]"));
+                        None
+                    }
                 }
             }).collect::<Vec<_>>();
-            
+
             for i in 1..arms.len(){
-                let ident = *arms.get(i).unwrap();
+                let ident = arms.get(i).unwrap();
                 for j in 0..i{
-                    let prev_ident = *arms.get(j).unwrap();
-                    if prev_ident.to_string() > ident.to_string(){
-                        let message = format!("{} should sort before {}",ident.to_string(),prev_ident.to_string());
-                        self.error_token = Some(mk_error(ident.span(), &message));
+                    let prev_ident = arms.get(j).unwrap();
+                    if ident.is_some() && prev_ident.is_some(){
+                        let ident = ident.as_ref().unwrap();
+                        let prev_ident = prev_ident.as_ref().unwrap();
+                        if prev_ident.to_string() > ident.to_string(){
+                            let message = format!("{} should sort before {}",ident.to_string(),prev_ident.to_string());
+                            self.error_token.push(mk_error(ident.span(), &message));
+                        }
                     }
                 }
             }
@@ -78,10 +94,8 @@ impl VisitMut for SortMatchArm{
 #[proc_macro_attribute]
 pub fn check(_: TokenStream, input: TokenStream) -> TokenStream{
     let mut input = parse_macro_input!(input as ItemFn);    
-    let mut sort_match_arm = SortMatchArm{error_token:None};
+    let mut sort_match_arm = SortMatchArm{error_token: Vec::new()};
     sort_match_arm.visit_item_fn_mut(&mut input);
-    if let Some(error_token) = sort_match_arm.error_token{
-        return (quote! { #input #error_token }).into();
-    }
-    (quote!{#input}).into()
+    let error_token = sort_match_arm.error_token;
+    (quote!{ #input #(#error_token)* }).into()
 }
