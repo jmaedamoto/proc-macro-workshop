@@ -6,29 +6,16 @@
 // To run the code:
 //     $ cargo run
 
-use sorted::sorted;
+use bitfield::*;
 
-#[sorted]
-pub enum Conference {
-    RustBeltRust,
-    RustConf,
-    RustFest,
-    RustLatam,
-    RustRush,
+//#[bitfield]
+pub struct MyFourBytes {
+    a: B1,
+    b: B3,
+    c: B4,
+    d: B24,
 }
 
-impl Conference {
-    #[sorted::check]
-    pub fn region(&self) -> &str {
-        use self::Conference::*;
-
-        #[sorted]
-        match self {
-            RustFest => "Europe",
-            RustLatam => "Latin America",
-            _ => "elsewhere",  
-        }
-    }
+fn main() {
+    assert_eq!(<B24 as Specifier>::BITS, 24);
 }
-
-fn main() {}
