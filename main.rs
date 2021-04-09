@@ -8,7 +8,7 @@
 
 use bitfield::*;
 
-//#[bitfield]
+#[bitfield]
 pub struct MyFourBytes {
     a: B1,
     b: B3,
@@ -17,5 +17,5 @@ pub struct MyFourBytes {
 }
 
 fn main() {
-    assert_eq!(<B24 as Specifier>::BITS, 24);
+    assert_eq!(std::mem::size_of::<MyFourBytes>(), 4);
 }
