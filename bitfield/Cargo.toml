@@ -14,3 +14,4 @@ trybuild = { version = "1.0", features = ["diff"] }
 
 [dependencies]
 bitfield-impl = { path = "impl" }
+seq-macro = "0.2"

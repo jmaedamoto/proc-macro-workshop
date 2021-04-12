@@ -3,3 +3,15 @@ error: unsupported by #[sorted]
    |
 12 |         [] => Some(0),
    |         ^^
+
+error: unsupported by #[sorted]
+  --> $DIR/07-unrecognized-pattern.rs:13:9
+   |
+13 |         [a] => Some(*a),
+   |         ^^^
+
+error: unsupported by #[sorted]
+  --> $DIR/07-unrecognized-pattern.rs:14:9
+   |
+14 |         [a, b] => Some(a + b),
+   |         ^^^^^^
