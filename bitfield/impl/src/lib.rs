@@ -47,29 +47,6 @@ pub fn bitfield(_: TokenStream, input: TokenStream) -> TokenStream {
 
     let size = quote!{(0 #(+ #bit_types)*) / 8};
 
-    //let mut setters = Vec::new();
-    //let mut getters = Vec::new();
-
-    bit_fields.iter().enumerate().for_each(|(i,bit_field)|{
-        
-        let setter = quote!{
-            fn set_c(&mut self, c: u64){
-                let byte = (<B1 as Specifier>::BITS + <B3 as Specifier>::BITS) / 8;
-                let bit = <B1 as Specifier>::BITS + <B3 as Specifier>::BITS;
-        
-                let mut mask:[u8;4] = [255,255,255,255];
-                mask[byte] = mask[byte].checked_shl(bit as u32).unwrap() as u8;
-        
-                let mut value:[u8;4] = [0,0,0,0];
-                value[byte] = c.checked_shl(bit as u32).unwrap() as u8;
-        
-                for i in 0..self.data.len(){
-                    self.data[i] = self.data[i] & mask[i] | value[i];
-                }
-            }
-        };
-    });
-
     (quote!{
         #[repr(C)]
         #visibility struct #ident {
