@@ -35,9 +35,9 @@ fn main() {
     assert_eq!(0, bitfield.get_c());
     assert_eq!(0, bitfield.get_d());
 
-    bitfield.set_c(14);
-    assert_eq!(0, bitfield.get_a());
-    assert_eq!(0, bitfield.get_b());
-    assert_eq!(14, bitfield.get_c());
-    assert_eq!(0, bitfield.get_d());
+    //bitfield.set_c(14);
+    //assert_eq!(0, bitfield.get_a());
+    //assert_eq!(0, bitfield.get_b());
+    //assert_eq!(14, bitfield.get_c());
+    //assert_eq!(0, bitfield.get_d());
 }

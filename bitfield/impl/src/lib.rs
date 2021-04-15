@@ -14,7 +14,6 @@ struct BitField{
 
 #[proc_macro_attribute]
 pub fn bitfield(_: TokenStream, input: TokenStream) -> TokenStream {
-
     let input = parse_macro_input!(input as Item);
     let visibility: syn::Visibility;
     let ident: syn::Ident;
@@ -40,63 +39,121 @@ pub fn bitfield(_: TokenStream, input: TokenStream) -> TokenStream {
         }
     }
 
-    let bit_types = bit_fields.iter().map(|bit_field|{
-        let bit_type = &bit_field.bit_type;
-        quote!{<#bit_type as Specifier>::BITS}
-    });
 
-    let size = quote!{(0 #(+ #bit_types)*) / 8};
 
-    let mut setters = Vec::new();
+    let mut setters= Vec::new();
     let mut getters = Vec::new();
-    let mut bits = quote!{0};
 
-    bit_fields.iter().for_each(|bit_field|{
+
+
+    bit_fields.iter().enumerate().for_each(|(i, bit_field)|{
         let name = &bit_field.name;
         let bit_type = &bit_field.bit_type;
-        let setter_ident = format_ident!("set_{}", name);      
+        let bit_size = quote!{<#bit_type as Specifier>::BITS};
+        let mut start_size = quote!{0};
+        for k in 0..i{
+            let prev_bit_type = &bit_fields[k].bit_type;
+            start_size = quote!{#start_size + <#prev_bit_type as Specifier>::BITS};
+        }
+        let end_size = quote!{#start_size + #bit_size};
+        let field_unit = quote!{<#bit_type as Specifier>::UNIT};
+        let setter_ident = format_ident!("set_{}", name);
         let getter_ident = format_ident!("get_{}", name);
 
         let setter = quote!{
-            fn #setter_ident(&mut self, #name: u64){
-                let byte = (#bits) / 8;
-                let bit = (#bits) % 8;
-        
-                let mut mask:[u8;4] = [255,255,255,255];
-                mask[byte] = mask[byte].checked_shl(bit as u32).unwrap() as u8;
-        
-                let mut value:[u8;4] = [0,0,0,0];
-                value[byte] = #name.checked_shl(bit as u32).unwrap() as u8;
-        
-                for i in 0..self.data.len(){
-                    self.data[i] = self.data[i] & mask[i] | value[i];
+            fn #setter_ident(&mut self, value: u64){
+                let start_byte = (#start_size) / 8;
+                let start_bit = (#start_size) % 8;
+                let end_byte = (#end_size) / 8;
+                let end_bit = (#end_size) % 8;
+                let size = #bit_size;
+
+                //clear existing data.
+                self.data[start_byte] = self.data[start_byte].checked_shl((8 - start_bit) as u32).unwrap();
+                self.data[start_byte] = self.data[start_byte].checked_shr((8 - start_bit) as u32).unwrap();
+                self.data[end_byte] = self.data[end_byte].checked_shr(end_bit as u32).unwrap();
+                self.data[end_byte] = self.data[end_byte].checked_shl(end_bit as u32).unwrap();
+    
+                if end_byte >  start_byte {
+                    for i in (start_byte + 1)..=end_byte{
+                        self.data[i] = 0;
+                    }
                 }
+
+                let mut value_start_byte = value.checked_shl(start_bit as u32).unwrap() as u8;
+                if start_byte == end_byte {
+                    value_start_byte = value_start_byte.checked_shr((8 - end_bit) as u32).unwrap();
+                    self.data[start_byte] = self.data[start_byte] | value_start_byte;
+                }else{
+                    let value_end_byte = value.checked_shr((size - end_bit) as u32).unwrap() as u8;
+                    self.data[start_byte] = self.data[start_byte] | value_start_byte;
+                    self.data[end_byte] = self.data[end_byte] | value_end_byte;
+                    for i in (start_byte + 1)..end_byte{
+                        let value_i_byte = value.checked_shr((start_bit + 8 * (i - start_byte -1)) as u32).unwrap() as u8;
+                        self.data[i] = self.data[i] | value_i_byte;
+                    }
+                }       
             }
         };
 
         let getter = quote!{
             fn #getter_ident(&mut self) -> u64{
-                let byte = (#bits) / 8;
-                let bit = (#bits) % 8;
-                let size = <#bit_type as Specifier>::BITS;
-                (self.data[byte].checked_shr(bit as u32).unwrap()) as u64
-            }    
+                let start_byte = (#start_size) / 8;
+                let start_bit = (#start_size) % 8;
+                let mut end_byte = (#end_size) / 8;
+                let mut end_bit = (#end_size) % 8;
+                if end_bit == 0 {
+                    end_byte -= 1;
+                    end_bit = 8;
+                }
+                let mut value = self.data[start_byte] as #field_unit;
+
+                if start_byte == end_byte{
+                    value = value.checked_shl((8 - end_bit) as u32).unwrap();
+                    value = value.checked_shr((8 - end_bit + start_bit) as u32).unwrap();
+                }else{
+                    value = value.checked_shr(start_bit as u32).unwrap();
+                    for i in (start_byte + 1)..end_byte {
+                        value += (self.data[i] as #field_unit).checked_shl((start_bit + 8 * (i - start_byte - 1)) as u32).unwrap();
+                        
+                    }
+                    let mut byte = self.data[end_byte];
+
+                    byte = byte.checked_shl((8 - end_bit) as u32).unwrap_or(0);
+                    byte = byte.checked_shr((8 - end_bit) as u32).unwrap_or(0);
+                    let mut byte = byte as #field_unit;
+                    byte = byte.checked_shl((start_bit + 8 * (end_byte - start_byte - 1)) as u32).unwrap_or(0);
+                    value += byte; 
+                }
+    
+                value as u64
+            }
         };
 
         setters.push(setter);
         getters.push(getter);
-        bits = quote!{#bits + <#bit_type as Specifier>::BITS};
     });
+
+    let bit_types = bit_fields.iter().map(|bit_field|{
+        let bit_type = &bit_field.bit_type;
+        quote!{<#bit_type as Specifier>::BITS}
+    });
+    let total_bits = quote!{0 #(+ #bit_types)*};
 
     (quote!{
         #[repr(C)]
         #visibility struct #ident {
-            data: [u8; #size],
+            data: [u8; (#total_bits) / 8],
+        }
+
+        impl ::bitfield::check::CheckTotalSizeMultipleOf8 for #ident{
+            type Size = ::bitfield::check::TotalSize<[();  (#total_bits) % 8]>;
         }
 
         impl #ident {
+
             fn new() -> #ident{
-                #ident{data: [0u8; #size]}
+                #ident{data: [0u8; (#total_bits) / 8]}
             }
 
             #(#setters)*
