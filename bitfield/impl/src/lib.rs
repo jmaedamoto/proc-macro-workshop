@@ -39,12 +39,8 @@ pub fn bitfield(_: TokenStream, input: TokenStream) -> TokenStream {
         }
     }
 
-
-
     let mut setters= Vec::new();
     let mut getters = Vec::new();
-
-
 
     bit_fields.iter().enumerate().for_each(|(i, bit_field)|{
         let name = &bit_field.name;
@@ -61,35 +57,39 @@ pub fn bitfield(_: TokenStream, input: TokenStream) -> TokenStream {
         let getter_ident = format_ident!("get_{}", name);
 
         let setter = quote!{
-            fn #setter_ident(&mut self, value: u64){
+            fn #setter_ident(&mut self, value: #field_unit){
                 let start_byte = (#start_size) / 8;
                 let start_bit = (#start_size) % 8;
-                let end_byte = (#end_size) / 8;
-                let end_bit = (#end_size) % 8;
+                let mut end_byte = (#end_size) / 8;
+                let mut end_bit = (#end_size) % 8;
                 let size = #bit_size;
-
+                if end_bit == 0 {
+                    end_byte -= 1;
+                    end_bit = 8;
+                }
                 //clear existing data.
-                self.data[start_byte] = self.data[start_byte].checked_shl((8 - start_bit) as u32).unwrap();
-                self.data[start_byte] = self.data[start_byte].checked_shr((8 - start_bit) as u32).unwrap();
-                self.data[end_byte] = self.data[end_byte].checked_shr(end_bit as u32).unwrap();
-                self.data[end_byte] = self.data[end_byte].checked_shl(end_bit as u32).unwrap();
-    
+
+                self.data[start_byte] = self.data[start_byte].checked_shl((8 - start_bit) as u32).unwrap_or(0);
+                self.data[start_byte] = self.data[start_byte].checked_shr((8 - start_bit) as u32).unwrap_or(0);
+                self.data[end_byte] = self.data[end_byte].checked_shr(end_bit as u32).unwrap_or(0);
+                self.data[end_byte] = self.data[end_byte].checked_shl(end_bit as u32).unwrap_or(0);
+
                 if end_byte >  start_byte {
                     for i in (start_byte + 1)..=end_byte{
                         self.data[i] = 0;
                     }
                 }
 
-                let mut value_start_byte = value.checked_shl(start_bit as u32).unwrap() as u8;
+                let mut value_start_byte = value.checked_shl(start_bit as u32).unwrap_or(0) as u8;
                 if start_byte == end_byte {
-                    value_start_byte = value_start_byte.checked_shr((8 - end_bit) as u32).unwrap();
+                    value_start_byte = value_start_byte.checked_shr((8 - end_bit) as u32).unwrap_or(0);
                     self.data[start_byte] = self.data[start_byte] | value_start_byte;
                 }else{
-                    let value_end_byte = value.checked_shr((size - end_bit) as u32).unwrap() as u8;
+                    let value_end_byte = value.checked_shr((size - end_bit) as u32).unwrap_or(0) as u8;
                     self.data[start_byte] = self.data[start_byte] | value_start_byte;
                     self.data[end_byte] = self.data[end_byte] | value_end_byte;
                     for i in (start_byte + 1)..end_byte{
-                        let value_i_byte = value.checked_shr((start_bit + 8 * (i - start_byte -1)) as u32).unwrap() as u8;
+                        let value_i_byte = value.checked_shr((start_bit + 8 * (i - start_byte -1)) as u32).unwrap_or(0) as u8;
                         self.data[i] = self.data[i] | value_i_byte;
                     }
                 }       
@@ -97,7 +97,7 @@ pub fn bitfield(_: TokenStream, input: TokenStream) -> TokenStream {
         };
 
         let getter = quote!{
-            fn #getter_ident(&mut self) -> u64{
+            fn #getter_ident(&mut self) -> #field_unit{
                 let start_byte = (#start_size) / 8;
                 let start_bit = (#start_size) % 8;
                 let mut end_byte = (#end_size) / 8;
@@ -109,12 +109,12 @@ pub fn bitfield(_: TokenStream, input: TokenStream) -> TokenStream {
                 let mut value = self.data[start_byte] as #field_unit;
 
                 if start_byte == end_byte{
-                    value = value.checked_shl((8 - end_bit) as u32).unwrap();
-                    value = value.checked_shr((8 - end_bit + start_bit) as u32).unwrap();
+                    value = value.checked_shl((8 - end_bit) as u32).unwrap_or(0);
+                    value = value.checked_shr((8 - end_bit + start_bit) as u32).unwrap_or(0);
                 }else{
-                    value = value.checked_shr(start_bit as u32).unwrap();
+                    value = value.checked_shr(start_bit as u32).unwrap_or(0);
                     for i in (start_byte + 1)..end_byte {
-                        value += (self.data[i] as #field_unit).checked_shl((start_bit + 8 * (i - start_byte - 1)) as u32).unwrap();
+                        value += (self.data[i] as #field_unit).checked_shl((start_bit + 8 * (i - start_byte - 1)) as u32).unwrap_or(0);
                         
                     }
                     let mut byte = self.data[end_byte];
@@ -126,7 +126,7 @@ pub fn bitfield(_: TokenStream, input: TokenStream) -> TokenStream {
                     value += byte; 
                 }
     
-                value as u64
+                value as #field_unit
             }
         };
 
@@ -151,7 +151,6 @@ pub fn bitfield(_: TokenStream, input: TokenStream) -> TokenStream {
         }
 
         impl #ident {
-
             fn new() -> #ident{
                 #ident{data: [0u8; (#total_bits) / 8]}
             }
