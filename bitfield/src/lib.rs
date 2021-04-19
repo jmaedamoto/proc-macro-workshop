@@ -10,6 +10,11 @@
 //
 // From the perspective of a user of this crate, they get all the necessary APIs
 // (macro, trait, struct) through the one bitfield crate.
+// 
+// Todo:
+// PartialEqを実装する。
+// numberからtry_fromで変換できるようにする。
+
 pub use bitfield_impl::*; 
 pub mod check;
 use seq_macro::seq;
@@ -50,3 +55,8 @@ seq!(N in 33..=64 {
     const BITS : usize = N;
   }
 });
+
+impl Specifier for bool{
+    type UNIT = u8;
+    const BITS : usize = 1;
+}
