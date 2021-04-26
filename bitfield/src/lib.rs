@@ -12,51 +12,36 @@
 // (macro, trait, struct) through the one bitfield crate.
 // 
 // Todo:
-// PartialEqを実装する。
-// numberからtry_fromで変換できるようにする。
+// toとfromを何らかの形で実装する
 
-pub use bitfield_impl::*; 
+pub use bitfield_impl::*;
 pub mod check;
-use seq_macro::seq;
 
 pub trait Specifier {
   type UNIT;
+  type InOut;
   const BITS : usize;
+
+  fn from_bytes(bytes: Self::UNIT) -> Self::InOut;
+  fn to_bytes(input: Self::InOut) -> Self::UNIT;
 }
 
-seq!(N in 1..=8 {
-  pub enum B#N {}
-  impl Specifier for B#N{
-    type UNIT = u8;
-    const BITS : usize = N;
-  }
-});
-
-seq!(N in 9..=16 {
-  pub enum B#N {}
-  impl Specifier for B#N{
-    type UNIT = u16;
-    const BITS : usize = N;
-  }
-});
-
-seq!(N in 17..=32 {
-  pub enum B#N {}
-  impl Specifier for B#N{
-    type UNIT = u32;
-    const BITS : usize = N;
-  }
-});
-
-seq!(N in 33..=64 {
-  pub enum B#N {}
-  impl Specifier for B#N{
-    type UNIT = u64;
-    const BITS : usize = N;
-  }
-});
+bitfield_impl::define_default_type!{}
 
 impl Specifier for bool{
-    type UNIT = u8;
-    const BITS : usize = 1;
+  type UNIT = u8;
+  type InOut = bool;
+  const BITS : usize = 1;
+
+  fn from_bytes(bytes: u8) -> bool {
+    match bytes{
+      0 => false,
+      1 => true,
+      _ => unreachable!()
+    }
+  }
+
+  fn to_bytes(input: bool) -> u8 {
+    input as u8
+  }
 }

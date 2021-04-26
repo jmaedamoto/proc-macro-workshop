@@ -6,7 +6,7 @@ pub struct TotalSize<T>(::std::marker::PhantomData<T>);
 
 pub trait TotalSizeIsMultipleOfEightBits{}
 
-macro_rules! impl_total_soze_for {
+macro_rules! impl_total_size_for {
   ($(($n:expr,$name:ident)),*) => {
       $(
           pub enum $name {}
@@ -17,7 +17,7 @@ macro_rules! impl_total_soze_for {
   };
 }
 
-impl_total_soze_for!(
+impl_total_size_for!(
   (0, ZeroMod8),
   (1, OneMod8),
   (2, TwoMod8),
