@@ -1,4 +1,5 @@
 use proc_macro::TokenStream;
+use proc_macro2::Span;
 use syn::{DeriveInput, parse_macro_input};
 use quote::quote;
 
@@ -18,7 +19,14 @@ pub fn derive(input: TokenStream) -> TokenStream {
         }
       }
     }).collect();
+    
     let count_variants = variants.iter().count();
+    if !count_variants.is_power_of_two(){
+      let message = "BitfieldSpecifier expected a number of variants which is a power of 2";
+      let error_token = syn::Error::new(Span::call_site(),message).into_compile_error();
+      return TokenStream::from(error_token);
+    }
+
     bits = count_variants.next_power_of_two().trailing_zeros() as usize;
     unit_type = match bits{
       0..=8 => quote!{u8},
