@@ -84,18 +84,24 @@ pub fn expand(input: TokenStream) -> TokenStream {
                 mask = !mask;
                 self.data[start_byte] = self.data[start_byte] & mask | value_start_byte;
               }else{
-                self.data[start_byte] = self.data[start_byte].checked_shl((8 - start_bit) as u32).unwrap_or(0);
-                self.data[start_byte] = self.data[start_byte].checked_shr((8 - start_bit) as u32).unwrap_or(0);
-                self.data[end_byte] = self.data[end_byte].checked_shr(end_bit as u32).unwrap_or(0);
-                self.data[end_byte] = self.data[end_byte].checked_shl(end_bit as u32).unwrap_or(0);
-                for i in (start_byte + 1)..=end_byte{
+                let mut mask = 255u8;
+                mask = mask.checked_shr(start_bit as u32).unwrap_or(0);
+                mask = mask.checked_shl(start_bit as u32).unwrap_or(0);
+                self.data[start_byte] = self.data[start_byte] & !mask;
+
+                mask = 255u8;
+                mask = mask.checked_shl(8 - end_bit as u32).unwrap_or(0);
+                mask = mask.checked_shr(8 - end_bit as u32).unwrap_or(0);
+                self.data[end_byte] = self.data[end_byte] & !mask;
+                for i in (start_byte + 1)..end_byte{
                     self.data[i] = 0;
                 }
+                
                 let value_end_byte = value.checked_shr((size - end_bit) as u32).unwrap_or(0) as u8;
                 self.data[start_byte] = self.data[start_byte] | value_start_byte;
                 self.data[end_byte] = self.data[end_byte] | value_end_byte;
                 for i in (start_byte + 1)..end_byte{
-                    let value_i_byte = value.checked_shr((start_bit + 8 * (i - start_byte -1)) as u32).unwrap_or(0) as u8;
+                    let value_i_byte = value.checked_shr((8 * (i - start_byte) - start_bit) as u32).unwrap_or(0) as u8;
                     self.data[i] = self.data[i] | value_i_byte;
                 }
               }
@@ -113,22 +119,22 @@ pub fn expand(input: TokenStream) -> TokenStream {
                   end_bit = 8;
               }
               let mut value = self.data[start_byte] as #field_unit;
-
               if start_byte == end_byte{
                   value = value.checked_shl((8 - end_bit) as u32).unwrap_or(0);
                   value = value.checked_shr((8 - end_bit + start_bit) as u32).unwrap_or(0);
               }else{
                   value = value.checked_shr(start_bit as u32).unwrap_or(0);
                   for i in (start_byte + 1)..end_byte {
-                      value += (self.data[i] as #field_unit).checked_shl((start_bit + 8 * (i - start_byte - 1)) as u32).unwrap_or(0);
-                      
+                      let mut byte = self.data[i] as #field_unit;
+                      byte = byte.checked_shl((8 * (i - start_byte) - start_bit) as u32).unwrap_or(0);
+                      value += (self.data[i] as #field_unit).checked_shl((8 * (i - start_byte) - start_bit) as u32).unwrap_or(0);
                   }
                   let mut byte = self.data[end_byte];
 
                   byte = byte.checked_shl((8 - end_bit) as u32).unwrap_or(0);
                   byte = byte.checked_shr((8 - end_bit) as u32).unwrap_or(0);
                   let mut byte = byte as #field_unit;
-                  byte = byte.checked_shl((start_bit + 8 * (end_byte - start_byte - 1)) as u32).unwrap_or(0);
+                  byte = byte.checked_shl((8 * (end_byte - start_byte) - start_bit) as u32).unwrap_or(0);
                   value += byte; 
               }
               #from_bytes
