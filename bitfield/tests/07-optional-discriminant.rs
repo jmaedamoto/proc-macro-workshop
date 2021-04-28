@@ -46,4 +46,5 @@ fn main() {
 
     entry.set_delivery_mode(DeliveryMode::Lowest);
     assert_eq!(entry.get_delivery_mode(), DeliveryMode::Lowest);
+    
 }

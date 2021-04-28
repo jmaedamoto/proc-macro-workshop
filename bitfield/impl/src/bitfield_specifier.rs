@@ -1,15 +1,16 @@
 use proc_macro::TokenStream;
 use proc_macro2::Span;
 use syn::{DeriveInput, parse_macro_input};
-use quote::quote;
+use quote::{quote, quote_spanned};
 
 pub fn derive(input: TokenStream) -> TokenStream {
   let input = parse_macro_input!(input as DeriveInput);
-  let ident = &input.ident;
+  let enum_ident = &input.ident;
 
   let mut bits = 0;
   let mut unit_type = quote!{};
   let mut from_bytes_arms = Vec::new();
+  let mut discriminant_in_range_check = Vec::new();
   if let syn::Data::Enum(syn::DataEnum{ref variants,..}) = input.data{
     from_bytes_arms = variants.iter().map(|variant|{
       let ident = &variant.ident;
@@ -35,12 +36,24 @@ pub fn derive(input: TokenStream) -> TokenStream {
       33..= 64 => quote!{u64},
       _ => unreachable!() 
     };
+
+    discriminant_in_range_check = variants.iter().map(|variant|{
+      let ident = &variant.ident;
+      let span = ident.span();
+      quote_spanned!(span => 
+        impl ::bitfield::check::CheckDiscriminantInRange<[(); Self::#ident as usize]> for #enum_ident{
+          type CheckType = [(); ((Self::#ident as usize) < (0x01_usize << #bits)) as usize];
+        }
+      )
+    }).collect();
   }
 
   let expanded = quote!{
-    impl Specifier for #ident{
+    #(#discriminant_in_range_check)*
+
+    impl Specifier for #enum_ident{
       type UNIT = #unit_type;
-      type InOut = #ident;
+      type InOut = #enum_ident;
       const BITS : usize = #bits;
 
       fn to_bytes(input: Self::InOut) -> Self::UNIT{

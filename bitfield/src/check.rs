@@ -33,3 +33,28 @@ pub trait CheckTotalSizeMultipleOf8
 where <Self::Size as SizeType>::CheckType: TotalSizeIsMultipleOfEightBits{
   type Size: SizeType;
 }
+
+
+pub trait DiscriminantInRange{}
+
+pub enum True{}
+pub enum False{}
+
+pub trait DispatchTrueFalse{
+  type Out;
+}
+
+impl DiscriminantInRange for True{}
+
+impl DispatchTrueFalse for [(); 0]{
+  type Out = False;
+}
+
+impl DispatchTrueFalse for [(); 1]{
+  type Out = True;
+}
+
+pub trait CheckDiscriminantInRange<A>
+where <Self::CheckType as DispatchTrueFalse>::Out: DiscriminantInRange{
+  type CheckType: DispatchTrueFalse;
+}
